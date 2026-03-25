@@ -38,7 +38,7 @@ public class DocumentIngestionService
         {
             var content = await File.ReadAllTextAsync(file);
             var fileName = Path.GetFileNameWithoutExtension(file);
-            var chunks = ChunkText(content, maxWords: 400, overlapWords: 50);
+            var chunks = ChunkText(content, maxWords: 200, overlapWords: 40);
 
             foreach (var chunk in chunks)
                 allChunks.Add((chunk, fileName, ExtractFormName(fileName)));
