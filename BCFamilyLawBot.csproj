@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Update="Data\forms\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Data\forms\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
