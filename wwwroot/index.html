@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BC Family Law Forms Assistant</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.9/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg-primary:#0f0f1a;--bg-secondary:#161628;--bg-tertiary:#1e1e35;--bg-card:#1a1a30;
+  --text-primary:#e8e6f0;--text-secondary:#a8a5b8;--text-muted:#6b687d;
+  --accent:#7c6df0;--accent-glow:#7c6df044;--accent-light:#a599f7;
+  --success:#34d399;--warning:#fbbf24;--danger:#f87171;
+  --border:#2a2a45;--border-hover:#3d3d5c;
+  --gold:#f59e0b;--teal:#06b6d4;
+  --font:'DM Sans',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+}
+body{font-family:var(--font);background:var(--bg-primary);color:var(--text-primary);height:100vh;overflow:hidden}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+.fade-up{animation:fadeUp .35s ease}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useRef, useEffect, useCallback } = React;
+
+const SUGGESTIONS = [
+  { icon: "📋", text: "What form do I need to start a family law case?", short: "Start a case" },
+  { icon: "💬", text: "How do I reply to a family claim?", short: "Reply to a claim" },
+  { icon: "📄", text: "What is Form F8 and when do I need it?", short: "Form F8 explained" },
+  { icon: "💰", text: "What financial forms do I need for a divorce with children?", short: "Financial forms" },
+  { icon: "🤝", text: "Walk me through the consent order workflow", short: "Consent orders" },
+  { icon: "⚖️", text: "What's the difference between Provincial and Supreme Court forms?", short: "Court comparison" },
+];
+
+function TypingDots() {
+  return (
+    <div style={{display:'flex',gap:5,padding:'4px 0'}}>
+      {[0,1,2].map(i => (
+        <div key={i} style={{
+          width:7,height:7,borderRadius:'50%',background:'var(--accent-light)',
+          animation:`pulse 1.2s ease infinite ${i*0.2}s`
+        }}/>
+      ))}
+    </div>
+  );
+}
+
+function SourceBadge({ name }) {
+  return (
+    <span style={{
+      display:'inline-block',padding:'3px 10px',borderRadius:20,
+      background:'var(--accent-glow)',color:'var(--accent-light)',
+      fontSize:11,fontWeight:500,border:'1px solid var(--accent)',
+      marginRight:4,marginBottom:4
+    }}>{name}</span>
+  );
+}
+
+function MessageBubble({ msg, isLatest }) {
+  const isUser = msg.role === 'user';
+  return (
+    <div className="fade-up" style={{
+      display:'flex',gap:10,maxWidth:'88%',
+      alignSelf:isUser?'flex-end':'flex-start',
+      flexDirection:isUser?'row-reverse':'row'
+    }}>
+      <div style={{
+        width:34,height:34,borderRadius:10,flexShrink:0,
+        display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,
+        background:isUser?'var(--accent)':'var(--bg-tertiary)',
+        border:isUser?'none':'1px solid var(--border)',
+        color:isUser?'#fff':'var(--text-secondary)'
+      }}>
+        {isUser ? '👤' : '⚖️'}
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:6}}>
+        <div style={{
+          padding:'12px 16px',borderRadius:14,fontSize:14,lineHeight:1.65,
+          whiteSpace:'pre-wrap',wordBreak:'break-word',
+          background:isUser
+            ?'linear-gradient(135deg,var(--accent),#6355d8)'
+            :'var(--bg-card)',
+          color:isUser?'#fff':'var(--text-primary)',
+          border:isUser?'none':'1px solid var(--border)',
+          borderBottomRightRadius:isUser?4:14,
+          borderBottomLeftRadius:isUser?14:4,
+        }}>
+          {msg.content}
+        </div>
+        {!isUser && msg.sources && msg.sources.length > 0 && (
+          <div style={{display:'flex',flexWrap:'wrap',gap:2,paddingLeft:4}}>
+            {msg.sources.map((s,i) => <SourceBadge key={i} name={s.name} />)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function WelcomeScreen({ onSuggestionClick }) {
+  return (
+    <div className="fade-up" style={{
+      display:'flex',flexDirection:'column',alignItems:'center',
+      justifyContent:'center',flex:1,padding:'40px 20px',gap:28
+    }}>
+      <div style={{
+        width:72,height:72,borderRadius:20,
+        background:'linear-gradient(135deg,var(--accent),#6355d8)',
+        display:'flex',alignItems:'center',justifyContent:'center',
+        fontSize:36,boxShadow:'0 8px 32px var(--accent-glow)'
+      }}>⚖️</div>
+      <div style={{textAlign:'center'}}>
+        <h1 style={{fontSize:22,fontWeight:700,marginBottom:6}}>BC Family Law Forms Assistant</h1>
+        <p style={{color:'var(--text-secondary)',fontSize:14,maxWidth:440,lineHeight:1.5}}>
+          I can help you understand BC Supreme Court and Provincial Court family law forms,
+          workflows, filing requirements, and how forms relate to each other.
+        </p>
+      </div>
+      <div style={{
+        display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',
+        gap:8,width:'100%',maxWidth:560
+      }}>
+        {SUGGESTIONS.map((s,i) => (
+          <button key={i} onClick={() => onSuggestionClick(s.text)} style={{
+            display:'flex',alignItems:'center',gap:8,padding:'12px 14px',
+            background:'var(--bg-tertiary)',border:'1px solid var(--border)',
+            borderRadius:12,cursor:'pointer',color:'var(--text-primary)',
+            fontSize:13,fontFamily:'var(--font)',textAlign:'left',
+            transition:'all .2s'
+          }}
+          onMouseEnter={e=>{e.target.style.borderColor='var(--accent)';e.target.style.background='var(--bg-card)'}}
+          onMouseLeave={e=>{e.target.style.borderColor='var(--border)';e.target.style.background='var(--bg-tertiary)'}}
+          >
+            <span style={{fontSize:18,flexShrink:0}}>{s.icon}</span>
+            <span>{s.short}</span>
+          </button>
+        ))}
+      </div>
+      <p style={{
+        fontSize:11,color:'var(--text-muted)',textAlign:'center',
+        maxWidth:480,lineHeight:1.6,padding:'12px 20px',
+        background:'var(--bg-secondary)',borderRadius:10,
+        border:'1px solid var(--border)'
+      }}>
+        This tool provides general information about BC family law forms.
+        It is <strong style={{color:'var(--warning)'}}>not legal advice</strong>.
+        For specific legal matters, consult a lawyer or visit{' '}
+        <a href="https://www2.gov.bc.ca/gov/content/justice/courthouse-services/documents-forms/court-forms/family-forms"
+           target="_blank" style={{color:'var(--accent-light)'}}>
+          BC Government Family Forms
+        </a>.
+      </p>
+    </div>
+  );
+}
+
+function StatsBar({ messageCount, formsMentioned }) {
+  return (
+    <div style={{
+      display:'flex',gap:20,padding:'6px 20px',
+      borderBottom:'1px solid var(--border)',background:'var(--bg-secondary)'
+    }}>
+      <div style={{display:'flex',alignItems:'center',gap:6,fontSize:11,color:'var(--text-muted)'}}>
+        <span style={{color:'var(--accent-light)',fontWeight:600}}>{messageCount}</span> messages
+      </div>
+      <div style={{display:'flex',alignItems:'center',gap:6,fontSize:11,color:'var(--text-muted)'}}>
+        <span style={{color:'var(--teal)',fontWeight:600}}>{formsMentioned}</span> forms referenced
+      </div>
+      <div style={{marginLeft:'auto',fontSize:11,color:'var(--success)',display:'flex',alignItems:'center',gap:4}}>
+        <div style={{width:6,height:6,borderRadius:'50%',background:'var(--success)'}}/>
+        RAG Pipeline Active
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [apiStatus, setApiStatus] = useState('checking');
+  const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    fetch('/api/health')
+      .then(r => r.ok ? setApiStatus('ok') : setApiStatus('error'))
+      .catch(() => setApiStatus('error'));
+  }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior:'smooth' });
+  }, [messages, loading]);
+
+  const formsMentioned = new Set(
+    messages.flatMap(m => m.sources?.map(s => s.name) || [])
+  ).size;
+
+  const sendMessage = useCallback(async (text) => {
+    const question = (text || input).trim();
+    if (!question || loading) return;
+    setInput('');
+    setError(null);
+
+    const userMsg = { role:'user', content:question };
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    setLoading(true);
+
+    try {
+      const history = newMessages.slice(-12).map(m => ({
+        role: m.role, content: m.content
+      }));
+
+      const res = await fetch('/api/chat', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ message: question, history })
+      });
+
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+
+      const data = await res.json();
+      setMessages(prev => [...prev, {
+        role:'assistant',
+        content: data.answer,
+        sources: data.sources || []
+      }]);
+    } catch (err) {
+      setError(err.message);
+      setMessages(prev => [...prev, {
+        role:'assistant',
+        content: `Sorry, something went wrong: ${err.message}. Please check that the server is running and your GitHub PAT is configured.`,
+        sources: []
+      }]);
+    }
+    setLoading(false);
+    inputRef.current?.focus();
+  }, [input, loading, messages]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const clearChat = () => {
+    setMessages([]);
+    setError(null);
+  };
+
+  return (
+    <div style={{
+      display:'flex',flexDirection:'column',height:'100vh',
+      maxWidth:920,margin:'0 auto',
+      background:'var(--bg-primary)',
+      borderLeft:'1px solid var(--border)',
+      borderRight:'1px solid var(--border)'
+    }}>
+      {/* Header */}
+      <div style={{
+        display:'flex',alignItems:'center',gap:14,
+        padding:'14px 20px',flexShrink:0,
+        background:'linear-gradient(135deg,#161628,#1a1a35)',
+        borderBottom:'1px solid var(--border)'
+      }}>
+        <div style={{
+          width:40,height:40,borderRadius:12,
+          background:'linear-gradient(135deg,var(--accent),#6355d8)',
+          display:'flex',alignItems:'center',justifyContent:'center',
+          fontSize:20,boxShadow:'0 4px 16px var(--accent-glow)'
+        }}>⚖️</div>
+        <div style={{flex:1}}>
+          <h1 style={{fontSize:16,fontWeight:700,
+            background:'linear-gradient(90deg,var(--accent-light),var(--teal))',
+            WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'
+          }}>BC Family Law Forms</h1>
+          <p style={{fontSize:11,color:'var(--text-muted)',marginTop:1}}>
+            RAG-powered assistant — Semantic Kernel + GitHub Models
+          </p>
+        </div>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <div style={{
+            padding:'4px 10px',borderRadius:20,fontSize:10,fontWeight:600,
+            background: apiStatus==='ok'?'#34d39920':'#f8717120',
+            color: apiStatus==='ok'?'var(--success)':'var(--danger)',
+            border:`1px solid ${apiStatus==='ok'?'var(--success)':'var(--danger)'}`
+          }}>
+            {apiStatus==='ok'?'API Connected':'API Offline'}
+          </div>
+          {messages.length > 0 && (
+            <button onClick={clearChat} style={{
+              width:34,height:34,borderRadius:10,border:'1px solid var(--border)',
+              background:'var(--bg-tertiary)',color:'var(--text-secondary)',
+              cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',
+              justifyContent:'center',fontFamily:'var(--font)'
+            }} title="Clear chat">↺</button>
+          )}
+        </div>
+      </div>
+
+      {messages.length > 0 && (
+        <StatsBar messageCount={messages.length} formsMentioned={formsMentioned} />
+      )}
+
+      {/* Messages Area */}
+      <div style={{
+        flex:1,overflowY:'auto',padding:'20px 20px 10px',
+        display:'flex',flexDirection:'column',gap:14,
+      }}>
+        {messages.length === 0 ? (
+          <WelcomeScreen onSuggestionClick={sendMessage} />
+        ) : (
+          <>
+            {messages.map((msg,i) => (
+              <MessageBubble key={i} msg={msg} isLatest={i===messages.length-1} />
+            ))}
+            {loading && (
+              <div className="fade-up" style={{display:'flex',gap:10,maxWidth:'88%'}}>
+                <div style={{
+                  width:34,height:34,borderRadius:10,
+                  background:'var(--bg-tertiary)',border:'1px solid var(--border)',
+                  display:'flex',alignItems:'center',justifyContent:'center',fontSize:16
+                }}>⚖️</div>
+                <div style={{
+                  padding:'14px 18px',borderRadius:14,
+                  background:'var(--bg-card)',border:'1px solid var(--border)',
+                  borderBottomLeftRadius:4
+                }}>
+                  <TypingDots/>
+                  <div style={{fontSize:11,color:'var(--text-muted)',marginTop:6}}>
+                    Searching knowledge base...
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef}/>
+          </>
+        )}
+      </div>
+
+      {/* Input Area */}
+      <div style={{
+        padding:'12px 20px 16px',flexShrink:0,
+        borderTop:'1px solid var(--border)',
+        background:'var(--bg-secondary)'
+      }}>
+        <div style={{
+          display:'flex',gap:10,alignItems:'flex-end',
+          background:'var(--bg-tertiary)',
+          border:'1px solid var(--border)',borderRadius:14,
+          padding:'10px 14px',
+          transition:'border-color .2s',
+        }}
+        onFocus={e=>e.currentTarget.style.borderColor='var(--accent)'}
+        onBlur={e=>e.currentTarget.style.borderColor='var(--border)'}
+        >
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask about BC family law forms..."
+            disabled={loading}
+            rows={1}
+            style={{
+              flex:1,border:'none',background:'transparent',
+              color:'var(--text-primary)',fontSize:14,fontFamily:'var(--font)',
+              resize:'none',outline:'none',lineHeight:1.5,
+              minHeight:24,maxHeight:100,
+            }}
+          />
+          <button
+            onClick={() => sendMessage()}
+            disabled={loading || !input.trim()}
+            style={{
+              width:36,height:36,borderRadius:10,border:'none',flexShrink:0,
+              background:(!loading && input.trim())
+                ?'linear-gradient(135deg,var(--accent),#6355d8)'
+                :'var(--border)',
+              color:'#fff',fontSize:16,cursor:(!loading && input.trim())?'pointer':'not-allowed',
+              display:'flex',alignItems:'center',justifyContent:'center',
+              transition:'all .2s',
+              boxShadow:(!loading && input.trim())?'0 4px 12px var(--accent-glow)':'none'
+            }}
+          >➤</button>
+        </div>
+        <div style={{
+          display:'flex',justifyContent:'space-between',
+          fontSize:11,color:'var(--text-muted)',marginTop:6,padding:'0 4px'
+        }}>
+          <span>Enter to send, Shift+Enter for new line</span>
+          <span>Powered by Semantic Kernel + GitHub Models</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
