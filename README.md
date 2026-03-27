@@ -199,7 +199,7 @@ The architecture is identical — only the endpoint configuration changes.
 
 ## ⚠️ Disclaimer
 
-This tool provides **general information** about BC family law forms. It is **not legal advice**. For specific legal matters, consult a qualified lawyer or visit the [BC Government Family Forms](https://www2.gov.bc.ca/gov/content/justice/courthouse-services/documents-forms/court-forms/family-forms) page.
+This tool provides **general information** about BC family law forms. It is **not legal advice**. For specific legal matters, consult a qualified lawyer or visit the [BC Government Family Forms](https://www2.gov.bc.ca/gov/content/justice/courthouse-services/documents-forms-records/court-forms/prov-family-forms) page.
 
 ---
 
